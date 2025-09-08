@@ -1,11 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { UserProfile, WeeklyPlan, BodyPartProfile, WorkoutPlan } from '../types';
 
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
-}
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Create AI instance with provided API key
+const createAI = (apiKey: string) => {
+    if (!apiKey) {
+        throw new Error("API key is required");
+    }
+    return new GoogleGenAI({ apiKey });
+};
 
 const exerciseSchema = {
     type: Type.OBJECT,
@@ -80,7 +82,8 @@ const fullPlanSchema = {
     required: ["days"]
 };
 
-export const generatePlan = async (profile: UserProfile): Promise<WeeklyPlan> => {
+export const generatePlan = async (profile: UserProfile, apiKey: string): Promise<WeeklyPlan> => {
+    const ai = createAI(apiKey);
     const prompt = `
         You are an expert trainer and dietician.
         Based on the client’s profile below, generate a personalized 7-day fitness and diet plan.
@@ -128,7 +131,8 @@ export const generatePlan = async (profile: UserProfile): Promise<WeeklyPlan> =>
     }
 };
 
-export const generateBodyPartWorkout = async (profile: BodyPartProfile): Promise<WorkoutPlan> => {
+export const generateBodyPartWorkout = async (profile: BodyPartProfile, apiKey: string): Promise<WorkoutPlan> => {
+    const ai = createAI(apiKey);
     const prompt = `
         You are an expert gym trainer.
         Generate a single-day, gym-style workout plan based on the following client preferences.

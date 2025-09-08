@@ -15,6 +15,13 @@ View your app in AI Studio: https://ai.studio/apps/drive/1z05G2bi_9js4UhORt3kX6J
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Run the app:
    `npm run dev`
+3. Open the app in your browser and enter your Gemini API key through the UI (no .env file needed)
+
+## Getting Started
+
+1. **Get your Gemini API Key**: Visit [Google AI Studio](https://ai.google.dev/gemini-api/docs/api-key) to get your free API key
+2. **Enter API Key**: When you open the app, you'll see an API key input at the top - paste your key there
+3. **Generate Plans**: Once your API key is set, you can generate weekly fitness plans or single-day workouts
+4. **Your Privacy**: API keys are stored locally in your browser and only sent to Google Gemini for plan generation

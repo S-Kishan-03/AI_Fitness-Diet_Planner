@@ -5,7 +5,11 @@ import WorkoutCard from './WorkoutCard';
 import ExerciseTimerModal from './ExerciseTimerModal';
 import { FitnessIcon } from './icons/FitnessIcon';
 
-const BodyPartWorkoutGenerator: React.FC = () => {
+interface BodyPartWorkoutGeneratorProps {
+  apiKey: string;
+}
+
+const BodyPartWorkoutGenerator: React.FC<BodyPartWorkoutGeneratorProps> = ({ apiKey }) => {
     const [profile, setProfile] = useState<BodyPartProfile>({
         bodyPart: 'Chest',
         intensity: 'Intermediate',
@@ -27,11 +31,16 @@ const BodyPartWorkoutGenerator: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!apiKey) {
+            setError('Please set your Gemini API key first.');
+            return;
+        }
+        
         setIsLoading(true);
         setError(null);
         setWorkoutPlan(null);
         try {
-            const plan = await generateBodyPartWorkout(profile);
+            const plan = await generateBodyPartWorkout(profile, apiKey);
             setWorkoutPlan(plan);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');
@@ -78,8 +87,12 @@ const BodyPartWorkoutGenerator: React.FC = () => {
                             <input type="number" name="timeAvailable" id="timeAvailable" value={profile.timeAvailable} onChange={handleChange} className="w-full bg-slate-700 border-slate-600 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition" required min="15" max="120" />
                         </div>
                     </div>
-                    <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-4 rounded-lg text-lg transition-transform transform hover:scale-105 duration-300">
-                        Generate Workout
+                    <button 
+                        type="submit" 
+                        disabled={!apiKey}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold py-4 px-4 rounded-lg text-lg transition-transform transform hover:scale-105 disabled:hover:scale-100 duration-300"
+                    >
+                        {!apiKey ? 'Set API Key First' : 'Generate Workout'}
                     </button>
                 </form>
             </div>
