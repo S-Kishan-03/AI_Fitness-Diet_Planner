@@ -3,9 +3,10 @@ import type { UserProfile } from '../types';
 
 interface ProfileFormProps {
   onSubmit: (profile: UserProfile) => void;
+  disabled?: boolean;
 }
 
-const ProfileForm: React.FC<ProfileFormProps> = ({ onSubmit }) => {
+const ProfileForm: React.FC<ProfileFormProps> = ({ onSubmit, disabled = false }) => {
   const [profile, setProfile] = useState<UserProfile>({
     age: 30,
     gender: 'Male',
@@ -100,8 +101,12 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ onSubmit }) => {
           </div>
         </div>
 
-        <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-4 rounded-lg text-lg transition-transform transform hover:scale-105 duration-300">
-          Generate My Plan
+        <button 
+          type="submit" 
+          disabled={disabled}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold py-4 px-4 rounded-lg text-lg transition-transform transform hover:scale-105 disabled:hover:scale-100 duration-300"
+        >
+          {disabled ? 'Set API Key First' : 'Generate My Plan'}
         </button>
       </form>
     </div>

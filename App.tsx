@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { UserProfile, WeeklyPlan, CompletionStatus } from './types';
 import ProfileForm from './components/ProfileForm';
 import PlanDisplay from './components/PlanDisplay';
 import ProgressTracker from './components/ProgressTracker';
 import BodyPartWorkoutGenerator from './components/BodyPartWorkoutGenerator';
+import ApiKeyInput from './components/ApiKeyInput';
 import { generatePlan } from './services/geminiService';
 import { FitnessIcon } from './components/icons/FitnessIcon';
 
@@ -16,17 +17,42 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [completionStatus, setCompletionStatus] = useState<CompletionStatus>({});
   const [generatorMode, setGeneratorMode] = useState<GeneratorMode>('weekly');
+  const [apiKey, setApiKey] = useState<string>('');
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Load API key from localStorage on component mount
+  useEffect(() => {
+    const savedApiKey = localStorage.getItem('gemini-api-key');
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+    }
+  }, []);
+
+  // Save API key to localStorage when it changes
+  const handleApiKeySet = useCallback((newApiKey: string) => {
+    setApiKey(newApiKey);
+    if (newApiKey) {
+      localStorage.setItem('gemini-api-key', newApiKey);
+    } else {
+      localStorage.removeItem('gemini-api-key');
+    }
+    setError(null); // Clear any previous API key related errors
+  }, []);
+
   const handleProfileSubmit = useCallback(async (profile: UserProfile) => {
+    if (!apiKey) {
+      setError('Please set your Gemini API key first.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setWeeklyPlan(null);
     setUserProfile(profile);
     setCompletionStatus({});
     try {
-      const plan = await generatePlan(profile);
+      const plan = await generatePlan(profile, apiKey);
       setWeeklyPlan(plan);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred. Please try again.');
@@ -34,7 +60,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [apiKey]);
 
   const handleToggleCompletion = useCallback((dayIndex: number, itemType: 'exercise' | 'meal', itemIndex: number) => {
     const key = `${dayIndex}-${itemType}-${itemIndex}`;
@@ -196,11 +222,12 @@ const App: React.FC = () => {
         <main>
           {!hasPlan && !isLoading && (
             <div>
+              <ApiKeyInput onApiKeySet={handleApiKeySet} currentApiKey={apiKey} />
               <div className="flex justify-center mb-8 gap-2 p-1 bg-slate-800 rounded-lg max-w-sm mx-auto">
                   <button onClick={() => setGeneratorMode('weekly')} className={`w-full py-2 px-4 rounded-md font-semibold transition-colors ${generatorMode === 'weekly' ? 'bg-emerald-600 text-white' : 'hover:bg-slate-700'}`}>Weekly Plan</button>
                   <button onClick={() => setGeneratorMode('bodyPart')} className={`w-full py-2 px-4 rounded-md font-semibold transition-colors ${generatorMode === 'bodyPart' ? 'bg-emerald-600 text-white' : 'hover:bg-slate-700'}`}>Single Day Workout</button>
               </div>
-              {generatorMode === 'weekly' ? <ProfileForm onSubmit={handleProfileSubmit} /> : <BodyPartWorkoutGenerator />}
+              {generatorMode === 'weekly' ? <ProfileForm onSubmit={handleProfileSubmit} disabled={!apiKey} /> : <BodyPartWorkoutGenerator apiKey={apiKey} />}
             </div>
           )}
           
