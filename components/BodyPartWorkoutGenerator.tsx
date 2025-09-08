@@ -5,7 +5,11 @@ import WorkoutCard from './WorkoutCard';
 import ExerciseTimerModal from './ExerciseTimerModal';
 import { FitnessIcon } from './icons/FitnessIcon';
 
-const BodyPartWorkoutGenerator: React.FC = () => {
+interface BodyPartWorkoutGeneratorProps {
+    onApiKeyInvalid: () => void;
+}
+
+const BodyPartWorkoutGenerator: React.FC<BodyPartWorkoutGeneratorProps> = ({ onApiKeyInvalid }) => {
     const [profile, setProfile] = useState<BodyPartProfile>({
         bodyPart: 'Chest',
         intensity: 'Intermediate',
@@ -34,7 +38,12 @@ const BodyPartWorkoutGenerator: React.FC = () => {
             const plan = await generateBodyPartWorkout(profile);
             setWorkoutPlan(plan);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+            if (errorMessage.toLowerCase().includes('api key')) {
+                onApiKeyInvalid();
+            } else {
+                setError(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }

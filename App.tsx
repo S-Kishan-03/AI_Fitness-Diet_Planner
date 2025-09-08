@@ -6,10 +6,12 @@ import ProgressTracker from './components/ProgressTracker';
 import BodyPartWorkoutGenerator from './components/BodyPartWorkoutGenerator';
 import { generatePlan } from './services/geminiService';
 import { FitnessIcon } from './components/icons/FitnessIcon';
+import ApiKeyModal from './components/ApiKeyModal';
 
 type GeneratorMode = 'weekly' | 'bodyPart';
 
 const App: React.FC = () => {
+  const [apiKey, setApiKey] = useState<string | null>(() => sessionStorage.getItem('gemini-api-key'));
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -18,6 +20,16 @@ const App: React.FC = () => {
   const [generatorMode, setGeneratorMode] = useState<GeneratorMode>('weekly');
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleApiKeySubmit = (key: string) => {
+    sessionStorage.setItem('gemini-api-key', key);
+    setApiKey(key);
+  };
+
+  const handleApiKeyInvalid = useCallback(() => {
+    sessionStorage.removeItem('gemini-api-key');
+    setApiKey(null);
+  }, []);
 
   const handleProfileSubmit = useCallback(async (profile: UserProfile) => {
     setIsLoading(true);
@@ -29,12 +41,17 @@ const App: React.FC = () => {
       const plan = await generatePlan(profile);
       setWeeklyPlan(plan);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred. Please try again.';
+      if (errorMessage.toLowerCase().includes('api key')) {
+        handleApiKeyInvalid();
+      } else {
+        setError(errorMessage);
+      }
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [handleApiKeyInvalid]);
 
   const handleToggleCompletion = useCallback((dayIndex: number, itemType: 'exercise' | 'meal', itemIndex: number) => {
     const key = `${dayIndex}-${itemType}-${itemIndex}`;
@@ -157,89 +174,93 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 text-gray-200 font-sans p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <header className="flex items-center justify-between mb-8 flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <FitnessIcon className="h-10 w-10 text-emerald-400" />
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
-              AI Fitness Planner
-            </h1>
-          </div>
-          {(
+      {!apiKey ? (
+        <ApiKeyModal onSubmit={handleApiKeySubmit} />
+      ) : (
+        <div className="max-w-7xl mx-auto">
+          <header className="flex items-center justify-between mb-8 flex-wrap gap-4">
             <div className="flex items-center gap-3">
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
-                <button
-                    onClick={handleImportClick}
-                    className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300"
-                    aria-label="Import a saved plan"
-                >
-                    Import Plan
-                </button>
-                {hasPlan && (
-                    <button
-                        onClick={handleSavePlan}
-                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300"
-                    >
-                        Save Plan
-                    </button>
-                )}
-                <button
-                    onClick={handleReset}
-                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300"
-                >
-                    Start Over
-                </button>
+              <FitnessIcon className="h-10 w-10 text-emerald-400" />
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+                AI Fitness Planner
+              </h1>
             </div>
-           )}
-        </header>
-
-        <main>
-          {!hasPlan && !isLoading && (
-            <div>
-              <div className="flex justify-center mb-8 gap-2 p-1 bg-slate-800 rounded-lg max-w-sm mx-auto">
-                  <button onClick={() => setGeneratorMode('weekly')} className={`w-full py-2 px-4 rounded-md font-semibold transition-colors ${generatorMode === 'weekly' ? 'bg-emerald-600 text-white' : 'hover:bg-slate-700'}`}>Weekly Plan</button>
-                  <button onClick={() => setGeneratorMode('bodyPart')} className={`w-full py-2 px-4 rounded-md font-semibold transition-colors ${generatorMode === 'bodyPart' ? 'bg-emerald-600 text-white' : 'hover:bg-slate-700'}`}>Single Day Workout</button>
+            {(
+              <div className="flex items-center gap-3">
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
+                  <button
+                      onClick={handleImportClick}
+                      className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300"
+                      aria-label="Import a saved plan"
+                  >
+                      Import Plan
+                  </button>
+                  {hasPlan && (
+                      <button
+                          onClick={handleSavePlan}
+                          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300"
+                      >
+                          Save Plan
+                      </button>
+                  )}
+                  <button
+                      onClick={handleReset}
+                      className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300"
+                  >
+                      Start Over
+                  </button>
               </div>
-              {generatorMode === 'weekly' ? <ProfileForm onSubmit={handleProfileSubmit} /> : <BodyPartWorkoutGenerator />}
-            </div>
-          )}
-          
-          {isLoading && (
-            <div className="flex flex-col items-center justify-center h-96">
-              <div className="animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-emerald-500"></div>
-              <p className="mt-6 text-xl text-emerald-300">Generating your personalized plan...</p>
-              <p className="mt-2 text-sm text-gray-400">This might take a moment. Great things are coming!</p>
-            </div>
-          )}
+            )}
+          </header>
 
-          {error && (
-            <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg relative text-center" role="alert">
-              <strong className="font-bold">Oops! </strong>
-              <span className="block sm:inline">{error}</span>
-            </div>
-          )}
+          <main>
+            {!hasPlan && !isLoading && (
+              <div>
+                <div className="flex justify-center mb-8 gap-2 p-1 bg-slate-800 rounded-lg max-w-sm mx-auto">
+                    <button onClick={() => setGeneratorMode('weekly')} className={`w-full py-2 px-4 rounded-md font-semibold transition-colors ${generatorMode === 'weekly' ? 'bg-emerald-600 text-white' : 'hover:bg-slate-700'}`}>Weekly Plan</button>
+                    <button onClick={() => setGeneratorMode('bodyPart')} className={`w-full py-2 px-4 rounded-md font-semibold transition-colors ${generatorMode === 'bodyPart' ? 'bg-emerald-600 text-white' : 'hover:bg-slate-700'}`}>Single Day Workout</button>
+                </div>
+                {generatorMode === 'weekly' ? <ProfileForm onSubmit={handleProfileSubmit} /> : <BodyPartWorkoutGenerator onApiKeyInvalid={handleApiKeyInvalid} />}
+              </div>
+            )}
+            
+            {isLoading && (
+              <div className="flex flex-col items-center justify-center h-96">
+                <div className="animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-emerald-500"></div>
+                <p className="mt-6 text-xl text-emerald-300">Generating your personalized plan...</p>
+                <p className="mt-2 text-sm text-gray-400">This might take a moment. Great things are coming!</p>
+              </div>
+            )}
 
-          {hasPlan && !isLoading && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
-                <PlanDisplay 
-                  plan={weeklyPlan} 
-                  completionStatus={completionStatus} 
-                  onToggleCompletion={handleToggleCompletion}
-                />
+            {error && (
+              <div className="bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg relative text-center" role="alert">
+                <strong className="font-bold">Oops! </strong>
+                <span className="block sm:inline">{error}</span>
               </div>
-              <div className="lg:col-span-1">
-                <ProgressTracker 
-                  profile={userProfile}
-                  progressData={progressData.weeklyProgress}
-                  streak={progressData.streak}
-                  rewards={progressData.rewards}
-                />
+            )}
+
+            {hasPlan && !isLoading && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2">
+                  <PlanDisplay 
+                    plan={weeklyPlan} 
+                    completionStatus={completionStatus} 
+                    onToggleCompletion={handleToggleCompletion}
+                  />
+                </div>
+                <div className="lg:col-span-1">
+                  <ProgressTracker 
+                    profile={userProfile}
+                    progressData={progressData.weeklyProgress}
+                    streak={progressData.streak}
+                    rewards={progressData.rewards}
+                  />
+                </div>
               </div>
-            </div>
-          )}
-        </main>
-      </div>
+            )}
+          </main>
+        </div>
+      )}
     </div>
   );
 };

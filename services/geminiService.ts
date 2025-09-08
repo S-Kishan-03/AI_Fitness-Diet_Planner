@@ -1,11 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { UserProfile, WeeklyPlan, BodyPartProfile, WorkoutPlan } from '../types';
 
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
-}
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAiClient = () => {
+    const apiKey = sessionStorage.getItem('gemini-api-key');
+    if (!apiKey) {
+        throw new Error("API key not found. Please provide your Gemini API key.");
+    }
+    return new GoogleGenAI({ apiKey });
+};
 
 const exerciseSchema = {
     type: Type.OBJECT,
@@ -81,6 +83,7 @@ const fullPlanSchema = {
 };
 
 export const generatePlan = async (profile: UserProfile): Promise<WeeklyPlan> => {
+    const ai = getAiClient();
     const prompt = `
         You are an expert trainer and dietician.
         Based on the client’s profile below, generate a personalized 7-day fitness and diet plan.
@@ -124,11 +127,15 @@ export const generatePlan = async (profile: UserProfile): Promise<WeeklyPlan> =>
 
     } catch (error) {
         console.error("Error generating plan with Gemini:", error);
+        if (error instanceof Error && error.message.toLowerCase().includes('api key')) {
+            throw new Error("Your Gemini API key appears to be invalid or has expired.");
+        }
         throw new Error("Failed to generate a valid plan from the AI. Please check your inputs and try again.");
     }
 };
 
 export const generateBodyPartWorkout = async (profile: BodyPartProfile): Promise<WorkoutPlan> => {
+    const ai = getAiClient();
     const prompt = `
         You are an expert gym trainer.
         Generate a single-day, gym-style workout plan based on the following client preferences.
@@ -168,6 +175,9 @@ export const generateBodyPartWorkout = async (profile: BodyPartProfile): Promise
 
     } catch (error) {
         console.error("Error generating body part workout:", error);
+        if (error instanceof Error && error.message.toLowerCase().includes('api key')) {
+            throw new Error("Your Gemini API key appears to be invalid or has expired.");
+        }
         throw new Error("Failed to generate a valid workout from the AI. Please try again.");
     }
 }
