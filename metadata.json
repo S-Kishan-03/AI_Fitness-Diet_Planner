@@ -1,0 +1,5 @@
+{
+  "name": "AI Fitness & Diet Planner",
+  "description": "A personalized training and diet planning app that adapts to each client’s age, gender, fitness level, health condition, timing availability, and dietary preference using AI.",
+  "requestFramePermissions": []
+}
